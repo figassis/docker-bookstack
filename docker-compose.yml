@@ -1,0 +1,61 @@
+version: "3"
+volumes:
+  public:
+  private:
+services:
+  nginx:
+    image: bitnami/nginx:latest
+    restart: always
+    container_name: nginx
+    ports:
+      - 443:8000
+    volumes:
+      - ./config/nginx:/opt/bitnami/nginx/conf/vhosts:ro
+      - public:/var/www/html/public
+    links:
+      - bookstack
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10M"
+        max-file: "3"
+  bookstack:
+    image: figassis/docker-bookstack:0.26.2
+    restart: always
+    container_name: app
+    expose:
+      - 9000
+    volumes:
+      - public:/var/www/html/public
+      - private:/var/www/html/storage/uploads
+      - ./config/php/php.ini:/usr/local/etc/php/php.ini:ro
+      - ./config/php/fpm.conf:/usr/local/etc/php-fpm.d/zz-fpm.conf:ro
+      - .env:/var/www/html/.env
+    links:
+      - mysql
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10M"
+        max-file: "3"
+  mysql:
+    image: figassis/sesame:latest
+    restart: always
+    container_name: db
+    expose:
+      - 3306
+    volumes:
+      - ./config/tunnel:/root/ssh
+    environment:
+      - REMOTE_HOST=rds.nellcorp.com
+      - REMOTE_PORT=3306
+      - LOCAL_PORT=3306
+      - TUNNEL_HOST=crypto-tunnel
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10M"
+        max-file: "3"
